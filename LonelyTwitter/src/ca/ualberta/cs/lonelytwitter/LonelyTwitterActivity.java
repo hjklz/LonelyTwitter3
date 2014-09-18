@@ -1,32 +1,27 @@
 package ca.ualberta.cs.lonelytwitter;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.List;
+
+import ca.ualberta.cs.lonelytwitter.data.FileDataManager;
+import ca.ualberta.cs.lonelytwitter.data.iDataManager;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ListView;
 
 public class LonelyTwitterActivity extends Activity {
-
-	private static final String FILENAME = "file.sav";
+	
+	private iDataManager manager;
 	
 	private EditText bodyText;
 	
-	private ArrayList<Tweet> tweets;
+	private ArrayList<abstractTweet> tweets;
 	
-	private ArrayAdapter<Tweet> tweetsViewAdapter;
+	private ArrayAdapter<abstractTweet> tweetsViewAdapter;
 	
 	private ListView oldTweetsList;
 
@@ -37,6 +32,10 @@ public class LonelyTwitterActivity extends Activity {
 		super.onCreate(savedInstanceState);
 		
 		setContentView(R.layout.main);
+		
+		// can now create a selector that creates the relevant data manager
+		manager = new FileDataManager();
+		
 		bodyText = (EditText) findViewById(R.id.body);
 		oldTweetsList = (ListView) findViewById(R.id.oldTweetsList);
 	}
@@ -45,56 +44,35 @@ public class LonelyTwitterActivity extends Activity {
 	protected void onStart() {
 		super.onStart();
 		
-		tweets = loadTweets();
-		tweetsViewAdapter = new ArrayAdapter<Tweet>(this, R.layout.list_item, tweets);
+		tweets = manager.loadTweets();
+		tweetsViewAdapter = new ArrayAdapter<abstractTweet>(this, R.layout.list_item, tweets);
 		oldTweetsList.setAdapter(tweetsViewAdapter);
 	}
 	
 	public void save(View v) {
 		
 		String text = bodyText.getText().toString();
-		Tweet tweet = new Tweet(new Date(), text);
 		
-		tweets.add(tweet);
+		//can now select which kind of tweet wants to be created
+		
+		if (text.contains("*")) {
+			StarredTweet sTweet = new StarredTweet(new Date(), text);
+			tweets.add(sTweet);
+		} else {
+			Tweet tweet = new Tweet(new Date(), text);
+			tweets.add(tweet);
+		}	
+		
 		tweetsViewAdapter.notifyDataSetChanged();
 		
 		bodyText.setText("");
-		saveTweets(tweets);
+		manager.saveTweets(tweets);
 	}
 	
 	public void clear(View v) {
 		
 		tweets.clear();
 		tweetsViewAdapter.notifyDataSetChanged();
-		saveTweets(tweets);
-	}
-	
-	public ArrayList<Tweet> loadTweets() {
-		ArrayList<Tweet> lts = new ArrayList<Tweet>();
-
-		try {
-			FileInputStream fis = new FileInputStream(FILENAME);
-			ObjectInputStream ois = new ObjectInputStream(fis);
-
-			lts = (ArrayList<Tweet>) ois.readObject();
-
-		} catch (Exception e) {
-			Log.i("LonelyTwitter", "Error casting");
-			e.printStackTrace();
-		} 
-
-		return lts;
-	}
-	
-	public void saveTweets(List<Tweet> lts) {
-		try {
-			FileOutputStream fos = new FileOutputStream(FILENAME);
-			ObjectOutputStream oos = new ObjectOutputStream(fos);
-			oos.writeObject(lts);
-			fos.close();
-		} 
-		catch (Exception e) {
-			e.printStackTrace();
-		}
+		manager.saveTweets(tweets);
 	}
 }
